@@ -12,6 +12,13 @@ pub enum Kind {
 }
 
 impl Kind {
+    pub fn id(self) -> &'static str {
+        match self {
+            Kind::Claude => "claude",
+            Kind::OpenCodeGo => "opencode-go",
+        }
+    }
+
     fn parse(s: &str) -> Result<Kind, String> {
         match s {
             "claude" => Ok(Kind::Claude),
@@ -87,17 +94,28 @@ pub fn opencode_auth() -> PathBuf {
     xdg("XDG_DATA_HOME", ".local/share").join("opencode/auth.json")
 }
 
+pub struct Config {
+    /// Minimum seconds between API calls per provider, shared by all widgets.
+    pub cache_seconds: i64,
+    pub providers: Vec<ProviderCfg>,
+}
+
+const DEFAULT_CACHE_SECONDS: i64 = 240;
+
 /// Load providers from `path`. A missing file at the default location means
 /// auto-detect: every provider whose standard credential file exists.
-pub fn load(path: Option<PathBuf>) -> Result<Vec<ProviderCfg>, String> {
+pub fn load(path: Option<PathBuf>) -> Result<Config, String> {
     let explicit = path.is_some();
     let path = path.unwrap_or_else(default_path);
     let text = match fs::read_to_string(&path) {
         Ok(t) => t,
-        Err(e) if !explicit && e.kind() == std::io::ErrorKind::NotFound => return Ok(autodetect()),
+        Err(e) if !explicit && e.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(Config { cache_seconds: DEFAULT_CACHE_SECONDS, providers: autodetect() })
+        }
         Err(e) => return Err(format!("{}: {e}", path.display())),
     };
     let table: Table = text.parse().map_err(|e| format!("{}: {e}", path.display()))?;
+    let cache_seconds = table.get("cache_seconds").and_then(Value::as_integer).unwrap_or(DEFAULT_CACHE_SECONDS);
     let Some(list) = table.get("provider").and_then(Value::as_array) else {
         return Err(format!("{}: no [[provider]] entries", path.display()));
     };
@@ -110,7 +128,7 @@ pub fn load(path: Option<PathBuf>) -> Result<Vec<ProviderCfg>, String> {
         let kind = Kind::parse(opts.get("type").and_then(Value::as_str).ok_or("provider without type")?)?;
         out.push(ProviderCfg::new(kind, opts));
     }
-    Ok(out)
+    Ok(Config { cache_seconds, providers: out })
 }
 
 fn autodetect() -> Vec<ProviderCfg> {

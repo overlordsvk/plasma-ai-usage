@@ -32,7 +32,9 @@ PlasmoidItem {
         for (const w of prov.windows) m = Math.max(m, w.percent)
         return m
     }
-    function refresh() { exec.connectSource(command) }
+    // ai-usage keeps a shared cache, so many widgets cost one API call per period.
+    // --fresh (refresh button) skips the cache age but still honours rate-limit backoff.
+    function refresh(fresh) { exec.connectSource(fresh ? command + " --fresh" : command) }
 
     P5Support.DataSource {
         id: exec
@@ -121,9 +123,10 @@ PlasmoidItem {
                         }
                     }
                     PC.Label {
-                        text: modelData.error ? "!" : Math.round(root.maxPercent(modelData)) + "%"
-                        color: modelData.error ? Kirigami.Theme.negativeTextColor
-                                               : root.colorFor(root.maxPercent(modelData))
+                        readonly property bool failed: modelData.windows.length === 0
+                        text: failed ? "!" : Math.round(root.maxPercent(modelData)) + "%" + (modelData.error ? "*" : "")
+                        color: failed ? Kirigami.Theme.negativeTextColor
+                                      : root.colorFor(root.maxPercent(modelData))
                     }
                 }
             }
@@ -152,7 +155,7 @@ PlasmoidItem {
                 PC.Label {
                     visible: !!modelData.error
                     text: modelData.error || ""
-                    color: Kirigami.Theme.negativeTextColor
+                    color: modelData.stale ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.negativeTextColor
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                 }
@@ -206,7 +209,7 @@ PlasmoidItem {
             }
             PC.ToolButton {
                 icon.name: "view-refresh"
-                onClicked: root.refresh()
+                onClicked: root.refresh(true)
             }
         }
     }

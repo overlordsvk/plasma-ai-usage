@@ -1,6 +1,12 @@
 # ai-usage configuration
 # Location: ~/.config/ai-usage/config.toml  (create it with `ai-usage --init`)
 #
+# All widgets and terminal runs share one cache: each provider's API is called
+# at most once per this many seconds, whatever the widgets' update intervals.
+# After an HTTP 429 the tool backs off (5 min, doubling up to 30 min) and keeps
+# showing the last good numbers.
+cache_seconds = 240
+
 # Each [[provider]] block is one row group in the widget. Providers are shown in
 # the order listed. You can list the same type more than once (e.g. two Claude accounts).
 #

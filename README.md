@@ -10,6 +10,7 @@ In the panel it takes little space: one short label per provider, a thin bar for
 - **OpenCode Go**: 5-hour rolling, weekly, monthly
 - Colours: green below 60 %, orange below 85 %, red from 85 %
 - Each check is two small HTTPS requests. It uses **none of your AI quota**.
+- One shared cache: any number of widgets (each screen's panel, the desktop) cost one API call per provider every few minutes. On HTTP 429 it backs off and keeps showing the last numbers.
 - Reuses the logins you already have (Claude Code, opencode). No extra sign-in.
 
 ## Requirements
@@ -68,6 +69,7 @@ short = "OC"
 
 | Key | Applies to | Meaning |
 |---|---|---|
+| `cache_seconds` | top level | Minimum seconds between API calls per provider, shared by all widgets (default 240) |
 | `type` | all | `claude` or `opencode-go` (required) |
 | `name`, `short` | all | Display name and panel label |
 | `enabled` | all | `false` hides the provider |
@@ -85,7 +87,7 @@ A type can appear more than once. For example, two Claude accounts with separate
 Right-click the widget → **Configure AI Usage…**
 
 - **Command**: what the widget runs. Default `$HOME/.local/bin/ai-usage --json`. Add `--config /path/to/file.toml` for a different config.
-- **Update every**: 1–120 minutes (default 3).
+- **Update every**: 1–120 minutes (default 3). This is how often the widget reads the shared cache. API calls are limited by `cache_seconds`. The refresh button skips the cache, at most once per 30 s.
 - **Opacity**: for the bars and text.
 - **Show widget background**: turn it off for a see-through look when the widget is on the desktop.
 - **Keep open and on top**: the popup stays open above other windows. The pin button in the popup footer toggles the same setting.
@@ -99,6 +101,8 @@ Right-click the widget → **Configure AI Usage…**
 
 The widget runs `ai-usage --json` on a timer and draws the result. Providers are fetched in parallel, and an error in one doesn't hide the others.
 
+Results are cached in `~/.cache/ai-usage/state.json`. A file lock makes concurrent runs wait for the one that is fetching, so three widgets refreshing at once still make one call per provider. If an API answers **HTTP 429**, that provider is not called again for 5 minutes, then 10, 20 and at most 30 while it keeps failing. Meanwhile the last good numbers stay visible, marked with `*` in the panel.
+
 `ai-usage` **never refreshes the Claude token itself**. Refreshing would replace Claude Code's saved login and could log it out. When the token expires (after a few hours without using Claude Code), the widget shows *token expired*. Running `claude` once fixes it.
 
 > **Note:** Neither endpoint is officially documented. Claude Code and opencode use them for their own usage screens, and they may change without notice. If a provider starts showing errors, please open an issue.
@@ -109,6 +113,7 @@ The widget runs `ai-usage --json` on a timer and draws the result. Providers are
 |---|---|
 | Panel shows `AI ⚠` | Hover over it for the message. Usually the command path is wrong: run `ai-usage --json` in a terminal. |
 | `token expired, run claude to refresh` | Run `claude` once. |
+| `rate limited (HTTP 429)` | Wait: it retries by itself and keeps showing the last numbers. Raise `cache_seconds` if it keeps happening. |
 | `unauthorized` | Log in again (`claude` → `/login`, or `opencode auth login`). |
 | Widget didn't change after updating | `systemctl --user restart plasma-plasmashell` |
 
