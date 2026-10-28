@@ -1,0 +1,14 @@
+{
+    "KPlugin": {
+        "Id": "local.aiusage",
+        "Name": "AI Usage",
+        "Description": "Claude and OpenCode Go subscription limits",
+        "Icon": "office-chart-bar",
+        "Category": "System Information",
+        "Version": "0.1",
+        "License": "MIT",
+        "Authors": [{ "Name": "mariusm" }]
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "KPackageStructure": "Plasma/Applet"
+}
