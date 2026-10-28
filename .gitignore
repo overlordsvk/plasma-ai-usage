@@ -1,1 +1,13 @@
-target/
+# build output
+/target/
+
+# a real config with credentials should never land here
+/config.toml
+*.local.toml
+
+# editors / OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store

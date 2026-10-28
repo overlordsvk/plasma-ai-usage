@@ -2,11 +2,15 @@
 name = "ai-usage"
 version = "0.1.0"
 edition = "2021"
+description = "Shows how much of your Claude and OpenCode Go subscription limits you've used"
+license = "MIT"
+repository = "https://github.com/overlordsvk/plasma-ai-usage"
 
 [dependencies]
 ureq = { version = "2", default-features = false, features = ["tls", "json"] }
 serde_json = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+toml = { version = "0.8", default-features = false, features = ["parse"] }
 
 [profile.release]
 opt-level = "s"

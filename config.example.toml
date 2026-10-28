@@ -1,0 +1,34 @@
+# ai-usage configuration
+# Location: ~/.config/ai-usage/config.toml  (create it with `ai-usage --init`)
+#
+# Each [[provider]] block is one row group in the widget. Providers are shown in
+# the order listed. You can list the same type more than once (e.g. two Claude accounts).
+#
+# Common keys:
+#   type     = "claude" | "opencode-go"   (required)
+#   name     = display name               (default: per type)
+#   short    = panel label, 1-3 chars     (default: per type)
+#   enabled  = true | false               (default: true)
+#   windows  = which limits to show, e.g. ["5h", "week"]   (default: all)
+#              claude: 5h, week, opus      opencode-go: 5h, week, month
+
+[[provider]]
+type = "claude"
+name = "Claude"
+short = "C"
+# Claude Code's OAuth credentials. Log in with `claude` first.
+# Default: $CLAUDE_CONFIG_DIR/.credentials.json, else ~/.claude/.credentials.json
+# credentials_file = "~/.claude/.credentials.json"
+# Or read the access token from an environment variable instead:
+# token_env = "CLAUDE_OAUTH_TOKEN"
+
+[[provider]]
+type = "opencode-go"
+name = "OpenCode Go"
+short = "OC"
+# Key source, first match wins: api_key, api_key_env, auth_file.
+# Default auth_file: $XDG_DATA_HOME/opencode/auth.json (written by `opencode auth login`)
+# auth_file = "~/.local/share/opencode/auth.json"
+# auth_entry = "opencode-go"
+# api_key_env = "OPENCODE_GO_API_KEY"
+# api_key = "sk-..."

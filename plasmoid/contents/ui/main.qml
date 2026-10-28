@@ -9,7 +9,7 @@ import org.kde.kirigami as Kirigami
 PlasmoidItem {
     id: root
 
-    readonly property string command: "$HOME/.local/bin/ai-usage --json"
+    readonly property string command: Plasmoid.configuration.command
     readonly property int refreshMs: Math.max(1, Plasmoid.configuration.intervalMinutes) * 60 * 1000
     readonly property real contentOpacity: Plasmoid.configuration.opacityPercent / 100
     property var providers: []
@@ -32,7 +32,6 @@ PlasmoidItem {
         for (const w of prov.windows) m = Math.max(m, w.percent)
         return m
     }
-    function shortName(name) { return name === "Claude" ? "C" : "OC" }
     function refresh() { exec.connectSource(command) }
 
     P5Support.DataSource {
@@ -44,9 +43,9 @@ PlasmoidItem {
                 const j = JSON.parse(data["stdout"])
                 root.providers = j.providers
                 root.updated = new Date().toLocaleTimeString(Qt.locale(), Locale.ShortFormat)
-                root.fatal = ""
+                root.fatal = j.error || ""
             } catch (e) {
-                root.fatal = data["stderr"] || "ai-usage failed (is it in ~/.local/bin?)"
+                root.fatal = data["stderr"] || "Could not run: " + root.command
             }
         }
     }
@@ -104,7 +103,7 @@ PlasmoidItem {
                     required property var modelData
                     spacing: Kirigami.Units.smallSpacing
                     PC.Label {
-                        text: root.shortName(modelData.name)
+                        text: modelData.short
                         font.bold: true
                         opacity: 0.8
                     }

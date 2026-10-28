@@ -5,12 +5,25 @@ import org.kde.kirigami as Kirigami
 import org.kde.kcmutils as KCM
 
 KCM.SimpleKCM {
+    property alias cfg_command: command.text
     property alias cfg_intervalMinutes: interval.value
     property alias cfg_opacityPercent: opacity.value
     property alias cfg_showBackground: background.checked
     property alias cfg_pinned: pinned.checked
 
     Kirigami.FormLayout {
+        QQC2.TextField {
+            id: command
+            Kirigami.FormData.label: "Command:"
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+            placeholderText: "$HOME/.local/bin/ai-usage --json"
+        }
+        QQC2.Label {
+            text: "Providers are set in ~/.config/ai-usage/config.toml (run ai-usage --init)."
+            opacity: 0.7
+            wrapMode: Text.Wrap
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+        }
         QQC2.SpinBox {
             id: interval
             Kirigami.FormData.label: "Update every (minutes):"

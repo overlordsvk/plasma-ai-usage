@@ -1,13 +1,19 @@
 {
     "KPlugin": {
-        "Id": "local.aiusage",
+        "Id": "com.github.overlordsvk.plasma-ai-usage",
         "Name": "AI Usage",
         "Description": "Claude and OpenCode Go subscription limits",
         "Icon": "office-chart-bar",
         "Category": "System Information",
         "Version": "0.1",
         "License": "MIT",
-        "Authors": [{ "Name": "mariusm" }]
+        "Authors": [
+            {
+                "Name": "Marius Molcany"
+            }
+        ],
+        "Website": "https://github.com/overlordsvk/plasma-ai-usage",
+        "BugReportUrl": "https://github.com/overlordsvk/plasma-ai-usage/issues"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
     "KPackageStructure": "Plasma/Applet"

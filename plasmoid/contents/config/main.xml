@@ -4,6 +4,7 @@
       xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
   <group name="General">
+    <entry name="command" type="String"><default>$HOME/.local/bin/ai-usage --json</default></entry>
     <entry name="intervalMinutes" type="Int"><default>3</default></entry>
     <entry name="opacityPercent" type="Int"><default>100</default></entry>
     <entry name="showBackground" type="Bool"><default>true</default></entry>
