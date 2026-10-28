@@ -3,16 +3,24 @@ import QtQuick.Layouts
 import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PC
 import org.kde.plasma.plasma5support as P5Support
+import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
 
     readonly property string command: "$HOME/.local/bin/ai-usage --json"
-    readonly property int refreshMs: 3 * 60 * 1000
+    readonly property int refreshMs: Math.max(1, Plasmoid.configuration.intervalMinutes) * 60 * 1000
+    readonly property real contentOpacity: Plasmoid.configuration.opacityPercent / 100
     property var providers: []
     property string updated: ""
     property string fatal: ""
+
+    // Pinned: popup stays open (and above other windows) when focus moves away.
+    hideOnWindowDeactivate: !Plasmoid.configuration.pinned
+    Plasmoid.backgroundHints: Plasmoid.configuration.showBackground
+        ? PlasmaCore.Types.DefaultBackground | PlasmaCore.Types.ConfigurableBackground
+        : PlasmaCore.Types.NoBackground
 
     function colorFor(p) {
         if (p >= 85) return Kirigami.Theme.negativeTextColor
@@ -82,6 +90,7 @@ PlasmoidItem {
         RowLayout {
             id: row
             anchors.fill: parent
+            opacity: root.contentOpacity
             spacing: Kirigami.Units.largeSpacing
 
             PC.Label {
@@ -125,6 +134,7 @@ PlasmoidItem {
     fullRepresentation: ColumnLayout {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 20
         spacing: Kirigami.Units.largeSpacing
+        opacity: root.contentOpacity
 
         PC.Label {
             visible: root.fatal !== ""
@@ -186,6 +196,14 @@ PlasmoidItem {
                 text: root.updated ? "Updated " + root.updated : ""
                 opacity: 0.6
                 Layout.fillWidth: true
+            }
+            PC.ToolButton {
+                icon.name: "window-pin"
+                checkable: true
+                checked: Plasmoid.configuration.pinned
+                onToggled: Plasmoid.configuration.pinned = checked
+                PC.ToolTip.text: checked ? "Unpin (close on focus loss)" : "Pin (keep open on top)"
+                PC.ToolTip.visible: hovered
             }
             PC.ToolButton {
                 icon.name: "view-refresh"

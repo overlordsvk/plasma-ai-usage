@@ -18,7 +18,7 @@ ai-usage --json   # what the widget reads
 Both endpoints are undocumented and may change. The Claude token is never refreshed by this tool
 (that would rotate Claude Code's refresh token); if it has expired, run `claude` once.
 
-Each check is two small GET requests and costs no tokens. The widget polls every 3 minutes.
+Each check is two small GET requests and costs no tokens. The widget polls every 3 minutes by default.
 
 ## Install
 
@@ -28,3 +28,13 @@ Each check is two small GET requests and costs no tokens. The widget polls every
 
 Then right-click the panel → Add Widgets → "AI Usage". Panel view: `C` / `OC` with one thin bar per
 window and the highest % (green < 60, orange < 85, red ≥ 85). Click for details and reset times.
+
+## Settings
+
+Right-click the widget → Configure AI Usage:
+
+- **Update every** – polling interval in minutes (default 3)
+- **Opacity** – 20–100 % for the bars and text
+- **Show widget background** – turn off for a transparent widget when placed on the desktop
+- **Keep open and on top** – same as the pin button in the popup footer: the popup stays open
+  above other windows instead of closing when you click elsewhere
