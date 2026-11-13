@@ -76,6 +76,7 @@ short = "OC"
 | `windows` | all | Limits to show. Claude: `5h`, `week`, `opus`. OpenCode Go: `5h`, `week`, `month` |
 | `credentials_file` | claude | Default `$CLAUDE_CONFIG_DIR/.credentials.json` or `~/.claude/.credentials.json` |
 | `token_env` | claude | Read the OAuth access token from this environment variable instead |
+| `refresh_command` | claude | Run when the token has expired (default `claude auth status`). `""` disables it |
 | `auth_file`, `auth_entry` | opencode-go | Default `~/.local/share/opencode/auth.json`, entry `opencode-go` |
 | `api_key_env` | opencode-go | Read the API key from this environment variable |
 | `api_key` | opencode-go | API key written directly in the file (keep the file private) |
@@ -103,7 +104,7 @@ The widget runs `ai-usage --json` on a timer and draws the result. Providers are
 
 Results are cached in `~/.cache/ai-usage/state.json`. A file lock makes concurrent runs wait for the one that is fetching, so three widgets refreshing at once still make one call per provider. If an API answers **HTTP 429**, that provider is not called again for 5 minutes, then 10, 20 and at most 30 while it keeps failing. Meanwhile the last good numbers stay visible, marked with `*` in the panel.
 
-`ai-usage` **never refreshes the Claude token itself**. Refreshing would replace Claude Code's saved login and could log it out. When the token expires (after a few hours without using Claude Code), the widget shows *token expired*. Running `claude` once fixes it.
+`ai-usage` **never refreshes the Claude token itself**. Doing that would replace Claude Code's saved login and could log it out. Instead, when the token has expired (it lasts about 8 hours), it runs `claude auth status`. That makes Claude Code renew the token itself, without any model call, so it uses no quota. You don't need to use Claude Code for the widget to stay working. The command can be changed or turned off with `refresh_command`.
 
 > **Note:** Neither endpoint is officially documented. Claude Code and opencode use them for their own usage screens, and they may change without notice. If a provider starts showing errors, please open an issue.
 
@@ -112,7 +113,8 @@ Results are cached in `~/.cache/ai-usage/state.json`. A file lock makes concurre
 | Symptom | Fix |
 |---|---|
 | Panel shows `AI ⚠` | Hover over it for the message. Usually the command path is wrong: run `ai-usage --json` in a terminal. |
-| `token expired, run claude to refresh` | Run `claude` once. |
+| `token still expired after refresh` | Your Claude login itself has ended (after about a month): run `claude auth login`. |
+| `refresh command ... failed` | `claude` isn't on the widget's PATH: set `refresh_command = "/full/path/to/claude auth status"`. |
 | `rate limited (HTTP 429)` | Wait: it retries by itself and keeps showing the last numbers. Raise `cache_seconds` if it keeps happening. |
 | `unauthorized` | Log in again (`claude` → `/login`, or `opencode auth login`). |
 | Widget didn't change after updating | `systemctl --user restart plasma-plasmashell` |

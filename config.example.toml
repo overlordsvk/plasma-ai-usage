@@ -27,6 +27,11 @@ short = "C"
 # credentials_file = "~/.claude/.credentials.json"
 # Or read the access token from an environment variable instead:
 # token_env = "CLAUDE_OAUTH_TOKEN"
+# When the token has expired, this command is run to make Claude Code renew it
+# (no model call, uses no quota). It runs with CLAUDE_CONFIG_DIR set to the
+# credentials file's directory. Use a full path if `claude` isn't on the
+# widget's PATH. Set to "" to disable.
+# refresh_command = "claude auth status"
 
 [[provider]]
 type = "opencode-go"

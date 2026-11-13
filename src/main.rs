@@ -6,7 +6,12 @@ mod config;
 use chrono::{DateTime, Utc};
 use config::{Kind, ProviderCfg};
 use serde_json::{json, Value};
-use std::{env, fs, path::PathBuf, process::ExitCode, time::Duration};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process::{Command, ExitCode, Stdio},
+    time::{Duration, Instant},
+};
 
 const HELP: &str = "\
 ai-usage - subscription usage for Claude and OpenCode Go
@@ -91,25 +96,77 @@ fn windows(v: &Value, keys: &[(&str, &'static str)], pct_key: &str, reset_key: &
         .collect()
 }
 
-/// Claude: OAuth token from Claude Code's credentials file. Never refreshed here,
-/// since that would rotate Claude Code's refresh token; running `claude` refreshes it.
-fn claude(cfg: &ProviderCfg) -> Result<Vec<Window>, FetchErr> {
-    let token = match cfg.str("token_env") {
-        Some(var) => env_var(var)?,
-        None => {
-            let creds = read_json(cfg.path("credentials_file").unwrap_or_else(config::claude_credentials))?;
-            let oauth = &creds["claudeAiOauth"];
-            if oauth["expiresAt"].as_i64().is_some_and(|exp| exp < Utc::now().timestamp_millis()) {
-                return Err("token expired, run `claude` to refresh".into());
+/// Run the configured refresh command (default `claude auth status`, which makes
+/// Claude Code renew its OAuth token without any model call). It runs with
+/// CLAUDE_CONFIG_DIR pointing at the credentials file's directory, so a second
+/// account's file is refreshed too. Gives up after 30 s.
+fn run_refresh(cmd: &str, creds: &Path) -> Result<(), String> {
+    let mut c = Command::new("sh");
+    c.args(["-c", cmd]).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+    if let Some(dir) = creds.parent() {
+        c.env("CLAUDE_CONFIG_DIR", dir);
+    }
+    let mut child = c.spawn().map_err(|e| format!("refresh command: {e}"))?;
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) if status.success() => return Ok(()),
+            Ok(Some(status)) => return Err(format!("refresh command `{cmd}` failed ({status})")),
+            Ok(None) if Instant::now() > deadline => {
+                let _ = child.kill();
+                return Err(format!("refresh command `{cmd}` timed out"));
             }
-            oauth["accessToken"].as_str().ok_or("no accessToken in credentials file")?.to_string()
+            Ok(None) => std::thread::sleep(Duration::from_millis(100)),
+            Err(e) => return Err(e.to_string()),
         }
-    };
+    }
+}
+
+/// Read the access token, or None if it expires within a minute.
+fn claude_token(creds: &Path) -> Result<Option<String>, FetchErr> {
+    let v = read_json(creds.to_path_buf())?;
+    let oauth = &v["claudeAiOauth"];
+    let soon = Utc::now().timestamp_millis() + 60_000;
+    if oauth["expiresAt"].as_i64().is_some_and(|exp| exp < soon) {
+        return Ok(None);
+    }
+    Ok(Some(oauth["accessToken"].as_str().ok_or("no accessToken in credentials file")?.to_string()))
+}
+
+fn claude_usage(token: &str) -> Result<Value, FetchErr> {
     let auth = format!("Bearer {token}");
-    let v = get(
+    get(
         "https://api.anthropic.com/api/oauth/usage",
         &[("Authorization", &auth), ("anthropic-beta", "oauth-2025-04-20")],
-    )?;
+    )
+}
+
+/// Claude: OAuth token from Claude Code's credentials file. We never touch the
+/// token ourselves (rotating it would log Claude Code out); when it has expired
+/// we let Claude Code renew it via `refresh_command`.
+fn claude(cfg: &ProviderCfg) -> Result<Vec<Window>, FetchErr> {
+    let v = if let Some(var) = cfg.str("token_env") {
+        claude_usage(&env_var(var)?)?
+    } else {
+        let creds = cfg.path("credentials_file").unwrap_or_else(config::claude_credentials);
+        let refresh = cfg.str("refresh_command").unwrap_or("claude auth status");
+        let renew = || -> Result<String, FetchErr> {
+            if refresh.is_empty() {
+                return Err("token expired, run `claude auth status` to refresh".into());
+            }
+            run_refresh(refresh, &creds)?;
+            claude_token(&creds)?.ok_or_else(|| "token still expired after refresh, run `claude auth login`".into())
+        };
+        let token = match claude_token(&creds)? {
+            Some(t) => t,
+            None => renew()?,
+        };
+        match claude_usage(&token) {
+            // Token revoked or rotated early: renew once and retry.
+            Err(e) if e.msg.starts_with("unauthorized") && !refresh.is_empty() => claude_usage(&renew()?)?,
+            r => r?,
+        }
+    };
     Ok(windows(
         &v,
         &[("five_hour", "5h"), ("seven_day", "week"), ("seven_day_opus", "opus")],
